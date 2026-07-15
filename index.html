@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vaultstrength — Password Strength Analyzer</title>
+
+  <!-- Google Fonts: Space Grotesk (display), IBM Plex Sans (body), IBM Plex Mono (technical/mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Background ambience: a faint vault-dial ring pattern drawn purely in CSS -->
+  <div class="bg-ring" aria-hidden="true"></div>
+
+  <main class="page">
+
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <!-- simple padlock glyph, drawn as inline SVG so it inherits theme colors -->
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+            <rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="12" cy="16" r="1.6" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="brand-name">Vaultstrength</span>
+      </div>
+      <p class="tagline">A dial for how hard your password is to crack — checked entirely on your device.</p>
+    </header>
+
+    <!-- ============ MAIN CARD ============ -->
+    <section class="card" aria-label="Password strength analyzer">
+
+      <!-- ---- Input row ---- -->
+      <div class="field-group">
+        <label for="password-input" class="field-label">Enter a password</label>
+        <div class="input-shell">
+          <input
+            id="password-input"
+            type="password"
+            class="password-input"
+            placeholder="Type or generate a password…"
+            autocomplete="new-password"
+            spellcheck="false"
+          />
+          <!-- show / hide toggle -->
+          <button type="button" id="toggle-visibility" class="icon-btn" aria-label="Show password" aria-pressed="false">
+            <!-- eye icon (shown state) -->
+            <svg class="eye-open" viewBox="0 0 24 24" width="19" height="19" fill="none">
+              <path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <!-- eye-off icon (hidden state) -->
+            <svg class="eye-closed" viewBox="0 0 24 24" width="19" height="19" fill="none">
+              <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M10.6 5.2A10.9 10.9 0 0 1 12 5c6.2 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7c1.4 0 2.6-.3 3.7-.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Generator control -->
+        <button type="button" id="generate-btn" class="generate-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          Generate a strong password
+        </button>
+      </div>
+
+      <!-- ---- Vault dial: the signature strength meter ---- -->
+      <div class="dial-row">
+        <div class="dial-wrap">
+          <svg id="dial-svg" viewBox="0 0 220 130" class="dial-svg" aria-hidden="true">
+            <!-- Track arc (background of the gauge) -->
+            <path id="dial-track" d="M14,120 A96,96 0 0 1 206,120" class="dial-track" />
+            <!-- Colored progress arc, length driven by JS via stroke-dasharray -->
+            <path id="dial-progress" d="M14,120 A96,96 0 0 1 206,120" class="dial-progress" />
+            <!-- Tick marks at each zone boundary (25/50/75) -->
+            <g id="dial-ticks" class="dial-ticks"></g>
+            <!-- Needle, rotated by JS around the pivot (110,120) -->
+            <g id="dial-needle-group">
+              <line id="dial-needle" x1="110" y1="120" x2="110" y2="34" class="dial-needle" />
+              <circle cx="110" cy="120" r="6" class="dial-pivot" />
+            </g>
+          </svg>
+          <div class="dial-readout">
+            <span id="score-number" class="score-number">0</span>
+            <span class="score-max">/100</span>
+          </div>
+        </div>
+
+        <div class="dial-caption">
+          <span id="strength-label" class="strength-label strength-label--empty">Enter a password</span>
+          <span id="crack-time" class="crack-time">Estimated crack time: —</span>
+        </div>
+      </div>
+
+      <!-- ---- Live rule checklist ---- -->
+      <ul class="rule-list" id="rule-list" aria-live="polite">
+        <li class="rule" data-rule="length">
+          <span class="rule-icon" aria-hidden="true"></span>
+          <span class="rule-text">At least 8 characters</span>
+        </li>
+        <li class="rule" data-rule="uppercase">
+          <span class="rule-icon" aria-hidden="true"></span>
+          <span class="rule-text">Contains an uppercase letter (A–Z)</span>
+        </li>
+        <li class="rule" data-rule="lowercase">
+          <span class="rule-icon" aria-hidden="true"></span>
+          <span class="rule-text">Contains a lowercase letter (a–z)</span>
+        </li>
+        <li class="rule" data-rule="number">
+          <span class="rule-icon" aria-hidden="true"></span>
+          <span class="rule-text">Contains a number (0–9)</span>
+        </li>
+        <li class="rule" data-rule="special">
+          <span class="rule-icon" aria-hidden="true"></span>
+          <span class="rule-text">Contains a special character (!@#$…)</span>
+        </li>
+        <li class="rule" data-rule="repeats">
+          <span class="rule-icon" aria-hidden="true"></span>
+          <span class="rule-text">No character repeated 3+ times in a row</span>
+        </li>
+      </ul>
+
+      <!-- ---- Suggestion panel (shown only for weak/medium passwords) ---- -->
+      <div id="suggestion-panel" class="suggestion-panel is-hidden">
+        <p class="suggestion-label">Try a stronger alternative</p>
+        <div class="suggestion-row">
+          <code id="suggestion-value" class="suggestion-value">—</code>
+          <button type="button" id="use-suggestion-btn" class="mini-btn">Use this</button>
+          <button type="button" id="copy-suggestion-btn" class="mini-btn mini-btn--ghost">Copy</button>
+        </div>
+      </div>
+
+    </section>
+
+    <footer class="footer">
+      <p>Everything on this page runs locally in your browser. Nothing you type is stored, logged, or sent anywhere.</p>
+    </footer>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
